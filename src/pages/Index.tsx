@@ -3,17 +3,48 @@ import { EmployeeTable } from "@/components/EmployeeTable";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { Leaderboard } from "@/components/Leaderboard";
-import { mockEmployees, mockChartData, mockInsights, mockLeaderboard } from "@/data/mockData";
 import { Activity, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { useEmployees } from "@/hooks/useEmployees";
+import { usePerformanceMetrics } from "@/hooks/usePerformanceMetrics";
+import { useInsights } from "@/hooks/useInsights";
+import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 const Index = () => {
-  const totalTasks = mockEmployees.reduce((sum, emp) => sum + emp.tasksCompleted, 0);
+  const { data: employees = [], isLoading: loadingEmployees, error: errorEmployees } = useEmployees();
+  const { data: chartData = [], isLoading: loadingMetrics } = usePerformanceMetrics();
+  const { data: insights = [], isLoading: loadingInsights } = useInsights();
+  const { data: leaderboard = [], isLoading: loadingLeaderboard } = useLeaderboard();
+
+  if (loadingEmployees || loadingMetrics || loadingInsights || loadingLeaderboard) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-lg text-muted-foreground">Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (errorEmployees) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center text-red-500">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+          <p className="text-lg font-semibold">Error al cargar datos</p>
+          <p className="text-sm">{errorEmployees.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalTasks = employees.reduce((sum, emp) => sum + emp.tasksCompleted, 0);
   const avgEfficiency = Math.round(
-    mockEmployees.reduce((sum, emp) => sum + emp.efficiency, 0) / mockEmployees.length
+    employees.reduce((sum, emp) => sum + emp.efficiency, 0) / employees.length || 0
   );
-  const totalErrors = mockEmployees.reduce((sum, emp) => sum + emp.errors, 0);
+  const totalErrors = employees.reduce((sum, emp) => sum + emp.errors, 0);
   const avgTime = Math.round(
-    mockEmployees.reduce((sum, emp) => sum + emp.avgTime, 0) / mockEmployees.length
+    employees.reduce((sum, emp) => sum + emp.avgTime, 0) / employees.length || 0
   );
 
   return (
@@ -66,47 +97,35 @@ const Index = () => {
             value={`${avgTime}s`}
             subtitle="Por tarea"
             icon={Clock}
-            trend={{ value: 3.4, isPositive: false }}
+            trend={{ value: 2.3, isPositive: false }}
             variant="warning"
           />
           <MetricsCard
-            title="Total Errores"
+            title="Errores Detectados"
             value={totalErrors}
             subtitle="Últimas 24h"
             icon={AlertCircle}
-            trend={{ value: 12, isPositive: false }}
+            trend={{ value: 15.2, isPositive: false }}
             variant="danger"
           />
         </div>
 
-        {/* Charts and Insights */}
-        <div className="mb-8 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+        {/* Main Grid */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Left Column: Table + Chart */}
+          <div className="space-y-6 lg:col-span-2">
+            <EmployeeTable employees={employees} />
             <PerformanceChart
-              data={mockChartData}
-              type="area"
-              title="Tendencia Semanal"
+              data={chartData}
+              title="Rendimiento Semanal"
             />
           </div>
-          <div>
-            <Leaderboard entries={mockLeaderboard} />
-          </div>
-        </div>
 
-        {/* Insights */}
-        <div className="mb-8">
-          <InsightsPanel insights={mockInsights} />
-        </div>
-
-        {/* Employee Table */}
-        <div>
-          <div className="mb-4">
-            <h2 className="text-xl font-bold">Empleados Activos</h2>
-            <p className="text-sm text-muted-foreground">
-              Monitoreo individual en tiempo real
-            </p>
+          {/* Right Column: Insights + Leaderboard */}
+          <div className="space-y-6">
+            <InsightsPanel insights={insights} />
+            <Leaderboard entries={leaderboard} />
           </div>
-          <EmployeeTable employees={mockEmployees} />
         </div>
       </main>
     </div>
