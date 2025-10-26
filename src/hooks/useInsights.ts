@@ -1,19 +1,38 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query';
+import { useEmployees } from './useEmployees';
+
+const API_URL = 'http://localhost:3000/api';
 
 export function useInsights() {
+  const { data: employees = [] } = useEmployees();
+
   return useQuery({
     queryKey: ['insights'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('insights')
-        .select('*')
-        .order('priority', { ascending: false })
-        .order('created_at', { ascending: false })
+      try {
+        const response = await fetch(`${API_URL}/insights/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ employeeData: employees }),
+        });
 
-      if (error) throw error
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
 
-      return data || []
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching insights:', error);
+        return [];
+      }
     },
-  })
+    enabled: employees.length > 0,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    retry: 0,
+  });
 }
